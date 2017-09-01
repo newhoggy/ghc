@@ -144,20 +144,23 @@ getCoreToDo dflags
     maybe_strictness_before phase
       = runWhen (phase `elem` strictnessBefore dflags) CoreDoStrictness
 
-    base_mode = SimplMode { sm_phase      = panic "base_mode"
-                          , sm_names      = []
-                          , sm_dflags     = dflags
-                          , sm_rules      = rules_on
-                          , sm_eta_expand = eta_expand_on
-                          , sm_inline     = True
-                          , sm_case_case  = True }
+    base_mode = SimplMode { sm_phase               = panic "base_mode"
+                          , sm_names               = []
+                          , sm_dflags              = dflags
+                          , sm_rules               = rules_on
+                          , sm_eta_expand          = eta_expand_on
+                          , sm_inline              = True
+                          , sm_case_case           = True
+                          , sm_preserve_exit_joins = True}
 
     simpl_phase phase names iter
       = CoreDoPasses
       $   [ maybe_strictness_before phase
           , CoreDoSimplify iter
                 (base_mode { sm_phase = Phase phase
-                           , sm_names = names })
+                           , sm_names = names
+                           , sm_preserve_exit_joins = names /= ["final"]
+                           })
 
           , maybe_rule_check (Phase phase) ]
 
