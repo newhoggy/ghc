@@ -173,7 +173,7 @@ exitify in_scope pairs =
     -- Case right hand sides are in tail-call position
     go captured (_, AnnCase scrut bndr ty alts) = do
         alts' <- forM alts $ \(dc, pats, rhs) -> do
-            rhs' <- go (pats ++ bndr : captured) rhs
+            rhs' <- go (captured ++ [bndr] ++ pats) rhs
             return (dc, pats, rhs')
         return $ Case (deAnnotate scrut) bndr ty alts'
 
@@ -182,9 +182,9 @@ exitify in_scope pairs =
         | AnnNonRec j rhs <- ann_bind
         , Just join_arity <- isJoinId_maybe j
         = do let (params, join_body) = collectNAnnBndrs join_arity rhs
-             join_body' <- go (params ++ captured) join_body
+             join_body' <- go (captured ++ params) join_body
              let rhs' = mkLams params join_body'
-             body' <- go (j : captured) body
+             body' <- go (captured ++ [j]) body
              return $ Let (NonRec j rhs') body'
 
         -- rec join point, RHSs and body are in tail-call position
@@ -194,15 +194,15 @@ exitify in_scope pairs =
              pairs' <- forM pairs $ \(j,rhs) -> do
                  let join_arity = idJoinArity j
                      (params, join_body) = collectNAnnBndrs join_arity rhs
-                 join_body' <- go (params ++ js ++ captured) join_body
+                 join_body' <- go (captured ++ js ++ params) join_body
                  let rhs' = mkLams params join_body'
                  return (j, rhs')
-             body' <- go (js ++ captured) body
+             body' <- go (captured ++ js) body
              return $ Let (Rec pairs') body'
 
         -- normal Let, only the body is in tail-call position
         | otherwise
-        = do body' <- go (bindersOf bind ++ captured) body
+        = do body' <- go (captured ++ bindersOf bind ) body
              return $ Let bind body'
       where bind = deAnnBind ann_bind
 
