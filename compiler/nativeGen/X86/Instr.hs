@@ -346,8 +346,8 @@ data Instr
         | BSR         Format Operand Reg -- bit scan reverse
 
     -- bit manipulation instructions
-        | PDEP        Format Operand Reg -- [BMI2] deposit bits to   the specified mask
-        | PEXT        Format Operand Reg -- [BMI2] extract bits from the specified mask
+        | PDEP        Format Operand Operand Reg -- [BMI2] deposit bits to   the specified mask
+        | PEXT        Format Operand Operand Reg -- [BMI2] extract bits from the specified mask
 
     -- prefetch
         | PREFETCH  PrefetchVariant Format Operand -- prefetch Variant, addr size, address to prefetch
@@ -465,10 +465,12 @@ x86_regUsageOfInstr platform instr
     DELTA   _           -> noUsage
 
     POPCNT _ src dst -> mkRU (use_R src []) [dst]
-    PDEP   _ src dst -> mkRU (use_R src []) [dst]
-    PEXT   _ src dst -> mkRU (use_R src []) [dst]
     BSF    _ src dst -> mkRU (use_R src []) [dst]
     BSR    _ src dst -> mkRU (use_R src []) [dst]
+
+    -- TODO jky fix this
+    PDEP   _ src mask dst -> mkRU (use_R src $ use_R mask []) [dst]
+    PEXT   _ src mask dst -> mkRU (use_R src $ use_R mask []) [dst]
 
     -- note: might be a better way to do this
     PREFETCH _  _ src -> mkRU (use_R src []) []
@@ -646,8 +648,8 @@ x86_patchRegsOfInstr instr env
     CLTD _              -> instr
 
     POPCNT fmt src dst -> POPCNT fmt (patchOp src) (env dst)
-    PDEP   fmt src dst -> PDEP   fmt (patchOp src) (env dst)
-    PEXT   fmt src dst -> PEXT   fmt (patchOp src) (env dst)
+    PDEP   fmt src mask dst -> PDEP   fmt (patchOp src) (patchOp mask) (env dst)
+    PEXT   fmt src mask dst -> PEXT   fmt (patchOp src) (patchOp mask) (env dst)
     BSF    fmt src dst -> BSF    fmt (patchOp src) (env dst)
     BSR    fmt src dst -> BSR    fmt (patchOp src) (env dst)
 

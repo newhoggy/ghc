@@ -1734,6 +1734,7 @@ defaultDynFlags mySettings myLlvmTargets =
         interactivePrint = Nothing,
         nextWrapperNum = panic "defaultDynFlags: No nextWrapperNum",
         sseVersion = Nothing,
+        bmiVersion = Nothing,
         avx = False,
         avx2 = False,
         avx512cd = False,

@@ -1855,19 +1855,22 @@ genCCall dflags is32Bit (PrimTarget (MO_PopCnt width)) dest_regs@[dst]
     lbl = mkCmmCodeLabel primUnitId (fsLit (popCntLabel width))
 
 genCCall dflags is32Bit (PrimTarget (MO_Pdep width)) dest_regs@[dst]
-         args@[src] = do
+         args@[src, mask] = do
     let platform = targetPlatform dflags
     if isBmi2Enabled dflags
-        then do code_src <- getAnyReg src
-                src_r <- getNewRegNat format
+        then do code_src  <- getAnyReg src
+                code_mask <- getAnyReg mask
+                src_r     <- getNewRegNat format
+                mask_r    <- getNewRegNat format
                 let dst_r = getRegisterReg platform False (CmmLocal dst)
-                return $ code_src src_r `appOL`
+                return $ code_src src_r `appOL` code_mask mask_r `appOL`
                     (if width == W8 then
                          -- The PDEP instruction doesn't take a r/m8
-                         unitOL (MOVZxL II8 (OpReg src_r) (OpReg src_r)) `appOL`
-                         unitOL (PDEP II16 (OpReg src_r) dst_r)
+                         unitOL (MOVZxL II8  (OpReg src_r ) (OpReg src_r )) `appOL`
+                         unitOL (MOVZxL II8  (OpReg mask_r) (OpReg mask_r)) `appOL`
+                         unitOL (PDEP   II16 (OpReg mask_r) (OpReg src_r ) dst_r)
                      else
-                         unitOL (PDEP format (OpReg src_r) dst_r)) `appOL`
+                         unitOL (PDEP format (OpReg mask_r) (OpReg src_r) dst_r)) `appOL`
                     (if width == W8 || width == W16 then
                          -- We used a 16-bit destination register above,
                          -- so zero-extend
@@ -1885,19 +1888,22 @@ genCCall dflags is32Bit (PrimTarget (MO_Pdep width)) dest_regs@[dst]
     lbl = mkCmmCodeLabel primUnitId (fsLit (pdepLabel width))
 
 genCCall dflags is32Bit (PrimTarget (MO_Pext width)) dest_regs@[dst]
-         args@[src] = do
+         args@[src, mask] = do
     let platform = targetPlatform dflags
     if isBmi2Enabled dflags
-        then do code_src <- getAnyReg src
-                src_r <- getNewRegNat format
+        then do code_src  <- getAnyReg src
+                code_mask <- getAnyReg mask
+                src_r     <- getNewRegNat format
+                mask_r    <- getNewRegNat format
                 let dst_r = getRegisterReg platform False (CmmLocal dst)
-                return $ code_src src_r `appOL`
+                return $ code_src src_r `appOL` code_mask mask_r `appOL`
                     (if width == W8 then
                          -- The PEXT instruction doesn't take a r/m8
-                         unitOL (MOVZxL II8 (OpReg src_r) (OpReg src_r)) `appOL`
-                         unitOL (PEXT II16 (OpReg src_r) dst_r)
+                         unitOL (MOVZxL II8 (OpReg src_r ) (OpReg src_r )) `appOL`
+                         unitOL (MOVZxL II8 (OpReg mask_r) (OpReg mask_r)) `appOL`
+                         unitOL (PEXT II16 (OpReg mask_r) (OpReg src_r) dst_r)
                      else
-                         unitOL (PEXT format (OpReg src_r) dst_r)) `appOL`
+                         unitOL (PEXT format (OpReg mask_r) (OpReg src_r) dst_r)) `appOL`
                     (if width == W8 || width == W16 then
                          -- We used a 16-bit destination register above,
                          -- so zero-extend
