@@ -468,7 +468,6 @@ x86_regUsageOfInstr platform instr
     BSF    _ src dst -> mkRU (use_R src []) [dst]
     BSR    _ src dst -> mkRU (use_R src []) [dst]
 
-    -- TODO jky fix this
     PDEP   _ src mask dst -> mkRU (use_R src $ use_R mask []) [dst]
     PEXT   _ src mask dst -> mkRU (use_R src $ use_R mask []) [dst]
 

@@ -648,7 +648,6 @@ pprInstr (POPCNT format src dst) = pprOpOp (sLit "popcnt") format src (OpReg dst
 pprInstr (BSF format src dst)    = pprOpOp (sLit "bsf")    format src (OpReg dst)
 pprInstr (BSR format src dst)    = pprOpOp (sLit "bsr")    format src (OpReg dst)
 
--- TODO jky fix this `(OpReg dst)` or dst
 pprInstr (PDEP format src mask dst)   = pprFormatOpOpReg (sLit "pdep") format src mask dst
 pprInstr (PEXT format src mask dst)   = pprFormatOpOpReg (sLit "pext") format src mask dst
 
