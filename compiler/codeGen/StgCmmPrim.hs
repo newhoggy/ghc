@@ -581,18 +581,18 @@ emitPrimOp _      [res] PopCnt64Op [w] = emitPopCntCall res w W64
 emitPrimOp dflags [res] PopCntOp   [w] = emitPopCntCall res w (wordWidth dflags)
 
 -- Parallel bit deposit
-emitPrimOp _      [res] Pdep8Op  [w] = emitPdepCall res w W8
-emitPrimOp _      [res] Pdep16Op [w] = emitPdepCall res w W16
-emitPrimOp _      [res] Pdep32Op [w] = emitPdepCall res w W32
-emitPrimOp _      [res] Pdep64Op [w] = emitPdepCall res w W64
-emitPrimOp dflags [res] PdepOp   [w] = emitPdepCall res w (wordWidth dflags)
+emitPrimOp _      [res] Pdep8Op  [src, mask] = emitPdepCall res src mask W8
+emitPrimOp _      [res] Pdep16Op [src, mask] = emitPdepCall res src mask W16
+emitPrimOp _      [res] Pdep32Op [src, mask] = emitPdepCall res src mask W32
+emitPrimOp _      [res] Pdep64Op [src, mask] = emitPdepCall res src mask W64
+emitPrimOp dflags [res] PdepOp   [src, mask] = emitPdepCall res src mask (wordWidth dflags)
 
 -- Parallel bit extract
-emitPrimOp _      [res] Pext8Op  [w] = emitPextCall res w W8
-emitPrimOp _      [res] Pext16Op [w] = emitPextCall res w W16
-emitPrimOp _      [res] Pext32Op [w] = emitPextCall res w W32
-emitPrimOp _      [res] Pext64Op [w] = emitPextCall res w W64
-emitPrimOp dflags [res] PextOp   [w] = emitPextCall res w (wordWidth dflags)
+emitPrimOp _      [res] Pext8Op  [src, mask] = emitPextCall res src mask W8
+emitPrimOp _      [res] Pext16Op [src, mask] = emitPextCall res src mask W16
+emitPrimOp _      [res] Pext32Op [src, mask] = emitPextCall res src mask W32
+emitPrimOp _      [res] Pext64Op [src, mask] = emitPextCall res src mask W64
+emitPrimOp dflags [res] PextOp   [src, mask] = emitPextCall res src mask (wordWidth dflags)
 
 -- count leading zeros
 emitPrimOp _      [res] Clz8Op  [w] = emitClzCall res w W8
@@ -875,55 +875,55 @@ callishPrimOpSupported dflags op
                          || llvm      -> Left MO_F64_Fabs
                      | otherwise      -> Right $ genericFabsOp W64
 
-      Pdep8Op        | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pdep    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPdep8Op)"
+      -- Pdep8Op        | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pdep    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPdep8Op)"
 
-      Pdep16Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pdep    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPdep16Op)"
+      -- Pdep16Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pdep    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPdep16Op)"
 
-      Pdep32Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pdep    (wordWidth dflags))
+      -- Pdep32Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pdep    (wordWidth dflags))
 
-                     | otherwise      -> error "TODO: Implement (Right genericPdep32Op)"
-      Pdep64Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pdep    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPdep64Op)"
+      --                | otherwise      -> error "TODO: Implement (Right genericPdep32Op)"
+      -- Pdep64Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pdep    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPdep64Op)"
 
-      PdepOp         | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pdep    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPdepOp)"
+      -- PdepOp         | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pdep    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPdepOp)"
 
-      Pext8Op        | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pext    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPext8Op)"
+      -- Pext8Op        | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pext    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPext8Op)"
 
-      Pext16Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pext    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPext16Op)"
+      -- Pext16Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pext    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPext16Op)"
 
-      Pext32Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pext    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPext32Op)"
+      -- Pext32Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pext    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPext32Op)"
 
-      Pext64Op       | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pext    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPext64Op)"
+      -- Pext64Op       | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pext    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPext64Op)"
 
-      PextOp         | (ncg && (x86ish
-                                || ppc))
-                         || llvm      -> Left (MO_Pext    (wordWidth dflags))
-                     | otherwise      -> error "TODO: Implement (Right genericPextOp)"
+      -- PextOp         | (ncg && (x86ish
+      --                           || ppc))
+      --                    || llvm      -> Left (MO_Pext    (wordWidth dflags))
+      --                | otherwise      -> error "TODO: Implement (Right genericPextOp)"
 
       _ -> pprPanic "emitPrimOp: can't translate PrimOp " (ppr op)
  where
@@ -2291,19 +2291,19 @@ emitPopCntCall res x width = do
         (MO_PopCnt width)
         [ x ]
 
-emitPdepCall :: LocalReg -> CmmExpr -> Width -> FCode ()
-emitPdepCall res x width = do
+emitPdepCall :: LocalReg -> CmmExpr -> CmmExpr -> Width -> FCode ()
+emitPdepCall res x y width = do
     emitPrimCall
         [ res ]
         (MO_Pdep width)
-        [ x ]
+        [ x, y ]
 
-emitPextCall :: LocalReg -> CmmExpr -> Width -> FCode ()
-emitPextCall res x width = do
+emitPextCall :: LocalReg -> CmmExpr -> CmmExpr -> Width -> FCode ()
+emitPextCall res x y width = do
     emitPrimCall
         [ res ]
         (MO_Pext width)
-        [ x ]
+        [ x, y ]
 
 emitClzCall :: LocalReg -> CmmExpr -> Width -> FCode ()
 emitClzCall res x width = do
