@@ -409,7 +409,7 @@ primop   Pdep16Op   "pdep16#"   Dyadic   Word# -> Word# -> Word#
     {Deposit bits to lower 16 bits of a word at locations specified by a mask.}
 primop   Pdep32Op   "pdep32#"   Dyadic   Word# -> Word# -> Word#
     {Deposit bits to lower 32 bits of a word at locations specified by a mask.}
-primop   Pdep64Op   "pdep64#"   GenPrimOp   WORD64 -> WORD64 -> Word#
+primop   Pdep64Op   "pdep64#"   GenPrimOp   WORD64 -> WORD64 -> WORD64
     {Deposit bits to a word at locations specified by a mask.}
 primop   PdepOp   "pdep#"   Dyadic   Word# -> Word# -> Word#
     {Deposit bits to a word at locations specified by a mask.}
@@ -420,7 +420,7 @@ primop   Pext16Op   "pext16#"   Dyadic   Word# -> Word# -> Word#
     {Extract bits from lower 16 bits of a word at locations specified by a mask.}
 primop   Pext32Op   "pext32#"   Dyadic   Word# -> Word# -> Word#
     {Extract bits from lower 32 bits of a word at locations specified by a mask.}
-primop   Pext64Op   "pext64#"   GenPrimOp   WORD64 -> WORD64 -> Word#
+primop   Pext64Op   "pext64#"   GenPrimOp   WORD64 -> WORD64 -> WORD64
     {Extract bits from a word at locations specified by a mask.}
 primop   PextOp   "pext#"   Dyadic   Word# -> Word# -> Word#
     {Extract bits from a word at locations specified by a mask.}
