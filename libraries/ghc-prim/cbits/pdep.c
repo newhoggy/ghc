@@ -47,16 +47,7 @@ hs_pdep8(StgWord src, StgWord mask)
   return hs_pdep64(src, mask);
 }
 
-#if WORD_SIZE_IN_BITS == 32
-
-extern StgWord hs_pdep(StgWord src, StgWord mask);
-StgWord
-hs_pdep(StgWord src, StgWord mask)
-{
-  return hs_pdep64(src, mask);
-}
-
-#elif WORD_SIZE_IN_BITS == 64
+#if WORD_SIZE_IN_BITS == 32 || WORD_SIZE_IN_BITS == 64
 
 extern StgWord hs_pdep(StgWord src, StgWord mask);
 StgWord

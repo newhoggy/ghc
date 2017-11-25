@@ -43,16 +43,7 @@ hs_pext8(StgWord src, StgWord mask)
   return hs_pext64(src, mask);
 }
 
-#if WORD_SIZE_IN_BITS == 32
-
-extern StgWord hs_pext(StgWord src, StgWord mask);
-StgWord
-hs_pext(StgWord src, StgWord mask)
-{
-  return hs_pext64(src, mask);
-}
-
-#elif WORD_SIZE_IN_BITS == 64
+#if WORD_SIZE_IN_BITS == 32 || WORD_SIZE_IN_BITS == 64
 
 extern StgWord hs_pext(StgWord src, StgWord mask);
 StgWord
