@@ -218,6 +218,11 @@ genCall t@(PrimTarget (MO_Prefetch_Data localityInt)) [] args
 -- and return types
 genCall t@(PrimTarget (MO_PopCnt w)) dsts args =
     genCallSimpleCast w t dsts args
+
+genCall t@(PrimTarget (MO_Pdep w)) dsts args =
+    genCallSimpleCast2 w t dsts args
+genCall t@(PrimTarget (MO_Pext w)) dsts args =
+    genCallSimpleCast2 w t dsts args
 genCall t@(PrimTarget (MO_Clz w)) dsts args =
     genCallSimpleCast w t dsts args
 genCall t@(PrimTarget (MO_Ctz w)) dsts args =
@@ -569,6 +574,37 @@ genCallSimpleCast w t@(PrimTarget op) [dst] args = do
 genCallSimpleCast _ _ dsts _ =
     panic ("genCallSimpleCast: " ++ show (length dsts) ++ " dsts")
 
+-- Handle simple function call that only need simple type casting, of the form:
+--   truncate arg >>= \a -> call(a) >>= zext
+--
+-- since GHC only really has i32 and i64 types and things like Word8 are backed
+-- by an i32 and just present a logical i8 range. So we must handle conversions
+-- from i32 to i8 explicitly as LLVM is strict about types.
+genCallSimpleCast2 :: Width -> ForeignTarget -> [CmmFormal] -> [CmmActual]
+              -> LlvmM StmtData
+genCallSimpleCast2 w t@(PrimTarget op) [dst] args = do
+    let width = widthToLlvmInt w
+        dstTy = cmmToLlvmType $ localRegType dst
+
+    fname                       <- cmmPrimOpFunctions op
+    (fptr, _, top3)             <- getInstrinct fname width (const width <$> args)
+
+    dstV                        <- getCmmReg (CmmLocal dst)
+
+    let (_, arg_hints) = foreignTargetHints t
+    let args_hints = zip args arg_hints
+    (argsV, stmts2, top2)       <- arg_vars args_hints ([], nilOL, [])
+    (argsV', stmts4)            <- castVars $ zip argsV (const width <$> argsV)
+    (retV, s1)                  <- doExpr width $ Call StdCall fptr argsV' []
+    ([retV'], stmts5)           <- castVars [(retV,dstTy)]
+    let s2                       = Store retV' dstV
+
+    let stmts = stmts2 `appOL` stmts4 `snocOL`
+                s1 `appOL` stmts5 `snocOL` s2
+    return (stmts, top2 ++ top3)
+genCallSimpleCast2 _ _ dsts _ =
+    panic ("genCallSimpleCast2: " ++ show (length dsts) ++ " dsts")
+
 -- | Create a function pointer from a target.
 getFunPtrW :: (LMString -> LlvmType) -> ForeignTarget
            -> WriterT LlvmAccum LlvmM LlvmVar
@@ -733,6 +769,15 @@ cmmPrimOpFunctions mop = do
     (MO_BSwap w)  -> fsLit $ "llvm.bswap."  ++ showSDoc dflags (ppr $ widthToLlvmInt w)
     (MO_Clz w)    -> fsLit $ "llvm.ctlz."   ++ showSDoc dflags (ppr $ widthToLlvmInt w)
     (MO_Ctz w)    -> fsLit $ "llvm.cttz."   ++ showSDoc dflags (ppr $ widthToLlvmInt w)
+
+    (MO_Pdep w)   ->  let w' = showSDoc dflags (ppr $ widthInBits w)
+                      in  if isBmi2Enabled dflags
+                            then fsLit $ "llvm.x86.bmi.pdep."   ++ w'
+                            else fsLit $ "hs_pdep"              ++ w'
+    (MO_Pext w)   ->  let w' = showSDoc dflags (ppr $ widthInBits w)
+                      in  if isBmi2Enabled dflags
+                            then fsLit $ "llvm.x86.bmi.pext."   ++ w'
+                            else fsLit $ "hs_pext"              ++ w'
 
     (MO_Prefetch_Data _ )-> fsLit "llvm.prefetch"
 
