@@ -105,6 +105,11 @@ avxEnabled = do
   dflags <- getDynFlags
   return (isAvxEnabled dflags)
 
+avx2Enabled :: NatM Bool
+avx2Enabled = do
+  dflags <- getDynFlags
+  return (isAvx2Enabled dflags)
+
 if_sse2 :: NatM a -> NatM a -> NatM a
 if_sse2 sse2 x87 = do
   b <- sse2Enabled
