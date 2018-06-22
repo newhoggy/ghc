@@ -22,13 +22,16 @@ import UniqFM
 import X86.Regs
 
 
+--TODO:
+-- Add VirtualRegAVX and inspect VecFormat and allocate
 mkVirtualReg :: Unique -> Format -> VirtualReg
 mkVirtualReg u format
    = case format of
-        FF32    -> VirtualRegSSE u
-        FF64    -> VirtualRegSSE u
-        FF80    -> VirtualRegD   u
-        _other  -> VirtualRegI   u
+        FF32         -> VirtualRegSSE u
+        FF64         -> VirtualRegSSE u
+        FF80         -> VirtualRegD   u
+        VecFormat {} -> VirtualRegSSE u
+        _other       -> VirtualRegI   u
 
 regDotColor :: Platform -> RealReg -> SDoc
 regDotColor platform reg

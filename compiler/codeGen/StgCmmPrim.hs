@@ -677,7 +677,7 @@ emitPrimOp _      [res] Word2DoubleOp [w] = emitPrimCall [res]
 -- SIMD primops
 emitPrimOp dflags [res] (VecBroadcastOp vcat n w) [e] = do
     checkVecCompatibility dflags vcat n w
-    doVecPackOp (vecElemInjectCast dflags vcat w) ty zeros (replicate n e) res
+    doVecBroadcastOp (vecElemInjectCast dflags vcat w) ty zeros e res
   where
     zeros :: CmmExpr
     zeros = CmmLit $ CmmVec (replicate n zero)
@@ -1638,9 +1638,8 @@ vecElemProjectCast _      _        _   =  Nothing
 -- given the current set of dynamic flags.
 checkVecCompatibility :: DynFlags -> PrimOpVecCat -> Length -> Width -> FCode ()
 checkVecCompatibility dflags vcat l w = do
-    when (hscTarget dflags /= HscLlvm) $ do
-        sorry $ unlines ["SIMD vector instructions require the LLVM back-end."
-                         ,"Please use -fllvm."]
+    when (hscTarget dflags /= HscLlvm && hscTarget dflags /= HscAsm) $ do
+        sorry "SIMD vector instructions not supported for the C backend or GHCi"
     check vecWidth vcat l w
   where
     check :: Width -> PrimOpVecCat -> Length -> Width -> FCode ()
@@ -1665,6 +1664,40 @@ checkVecCompatibility dflags vcat l w = do
 
 ------------------------------------------------------------------------------
 -- Helpers for translating vector packing and unpacking.
+doVecBroadcastOp :: Maybe MachOp  -- Cast from element to vector component
+                 -> CmmType       -- Type of vector
+                 -> CmmExpr       -- Initial vector
+                 -> CmmExpr     -- Elements
+                 -> CmmFormal     -- Destination for result
+                 -> FCode ()
+doVecBroadcastOp maybe_pre_write_cast ty _ es res = do
+    --emitAssign (CmmLocal dst) z
+    vecBroadcast es 0
+  where
+    vecBroadcast :: CmmExpr -> Int -> FCode ()
+    vecBroadcast e i = do
+        dst <- newTemp ty
+        if isFloatType (vecElemType ty)
+          then emitAssign (CmmLocal dst) (CmmMachOp (MO_VF_Broadcast len wid)
+                                                    [cast e, iLit])
+               --TODO : Add the MachOp MO_V_Broadcast
+          else emitAssign (CmmLocal dst) (CmmMachOp (MO_V_Insert len wid)
+                                                    [cast e, iLit])
+        emitAssign (CmmLocal res) (CmmReg (CmmLocal dst))
+      where
+        -- vector indices are always 32-bits
+        iLit = CmmLit (CmmInt (toInteger i) W32)
+
+    cast :: CmmExpr -> CmmExpr
+    cast val = case maybe_pre_write_cast of
+                 Nothing   -> val
+                 Just cast -> CmmMachOp cast [val]
+
+    len :: Length
+    len = vecLength ty
+
+    wid :: Width
+    wid = typeWidth (vecElemType ty)
 
 doVecPackOp :: Maybe MachOp  -- Cast from element to vector component
             -> CmmType       -- Type of vector
@@ -1674,7 +1707,6 @@ doVecPackOp :: Maybe MachOp  -- Cast from element to vector component
             -> FCode ()
 doVecPackOp maybe_pre_write_cast ty z es res = do
     dst <- newTemp ty
-    emitAssign (CmmLocal dst) z
     vecPack dst es 0
   where
     vecPack :: CmmFormal -> [CmmExpr] -> Int -> FCode ()
@@ -1682,16 +1714,15 @@ doVecPackOp maybe_pre_write_cast ty z es res = do
         emitAssign (CmmLocal res) (CmmReg (CmmLocal src))
 
     vecPack src (e : es) i = do
-        dst <- newTemp ty
         if isFloatType (vecElemType ty)
-          then emitAssign (CmmLocal dst) (CmmMachOp (MO_VF_Insert len wid)
-                                                    [CmmReg (CmmLocal src), cast e, iLit])
-          else emitAssign (CmmLocal dst) (CmmMachOp (MO_V_Insert len wid)
-                                                    [CmmReg (CmmLocal src), cast e, iLit])
-        vecPack dst es (i + 1)
+          then emitAssign (CmmLocal src) (CmmMachOp (MO_VF_Insert len wid)
+                                           [cast e, iLit])
+          else emitAssign (CmmLocal src) (CmmMachOp (MO_V_Insert len wid)
+                                           [cast e, iLit])
+        vecPack src es (i + 1)
       where
         -- vector indices are always 32-bits
-        iLit = CmmLit (CmmInt (toInteger i) W32)
+        iLit = CmmLit (CmmInt ((toInteger i) * 80) W32)
 
     cast :: CmmExpr -> CmmExpr
     cast val = case maybe_pre_write_cast of

@@ -364,6 +364,8 @@ pprFormat x
                 FF32  -> sLit "ss"      -- "scalar single-precision float" (SSE2)
                 FF64  -> sLit "sd"      -- "scalar double-precision float" (SSE2)
                 FF80  -> sLit "t"
+                -- TODO: Extend this to print "ss", "ps" etc
+                VecFormat {} -> sLit ""
                 )
 
 pprFormat_x87 :: Format -> SDoc
@@ -373,6 +375,7 @@ pprFormat_x87 x
                 FF64  -> sLit "l"
                 FF80  -> sLit "t"
                 _     -> panic "X86.Ppr.pprFormat_x87"
+
 
 pprCond :: Cond -> SDoc
 pprCond c
@@ -747,6 +750,28 @@ pprInstr (IDIV fmt op)   = pprFormatOp (sLit "idiv") fmt op
 pprInstr (DIV fmt op)    = pprFormatOp (sLit "div")  fmt op
 pprInstr (IMUL2 fmt op)  = pprFormatOp (sLit "imul") fmt op
 
+-- Vector Instructions
+
+pprInstr (VADDPS format s1 s2 dst)
+  = pprFormatOpRegReg (sLit "vaddps") format s1 s2 dst
+pprInstr (VSUBPS format s1 s2 dst)
+  = pprFormatOpRegReg (sLit "vsubps") format s1 s2 dst
+pprInstr (VMULPS format s1 s2 dst)
+  = pprFormatOpRegReg (sLit "vmulps") format s1 s2 dst
+pprInstr (VDIVPS format s1 s2 dst)
+  = pprFormatOpRegReg (sLit "vdivps") format s1 s2 dst
+pprInstr (VBROADCASTSS format from to)
+  = pprFormatAddrReg (sLit "vbroadcastss") format from to
+pprInstr (VMOVUPS format from to)
+  = pprFormatOpOp (sLit "vmovups") format from to
+pprInstr (VPXOR format s1 s2 dst)
+  = pprFormatRegRegReg (sLit "vpxor") format s1 s2 dst
+pprInstr (VEXTRACTPS format offset from to)
+  = pprFormatOpRegOp (sLit "vextractps") format offset from to
+pprInstr (INSERTPS format offset addr dst)
+  = pprFormatOpAddrReg (sLit "insertps") format offset addr dst
+pprInstr (VPSHUFD format offset src dst)
+  = pprFormatOpOpReg (sLit "vpshufd") format offset src dst
 -- x86_64 only
 pprInstr (MUL format op1 op2) = pprFormatOpOp (sLit "mul") format op1 op2
 pprInstr (MUL2 format op) = pprFormatOp (sLit "mul") format op
@@ -1133,7 +1158,6 @@ pprOperand f (OpReg r)   = pprReg f r
 pprOperand _ (OpImm i)   = pprDollImm i
 pprOperand _ (OpAddr ea) = pprAddr ea
 
-
 pprMnemonic_  :: LitString -> SDoc
 pprMnemonic_ name =
    char '\t' <> ptext name <> space
@@ -1179,7 +1203,6 @@ pprFormatOpOp name format op1 op2
         pprOperand format op2
     ]
 
-
 pprOpOp :: LitString -> Format -> Operand -> Operand -> SDoc
 pprOpOp name format op1 op2
   = hcat [
@@ -1207,6 +1230,27 @@ pprFormatRegReg name format reg1 reg2
         pprReg format reg2
     ]
 
+pprFormatOpAddrReg :: LitString -> Format -> Operand -> AddrMode -> Reg -> SDoc
+pprFormatOpAddrReg name format off addr dst
+  = hcat [
+        pprMnemonic name format,
+        pprOperand format off,
+        comma,
+        pprAddr addr,
+        comma,
+        pprReg format dst
+    ]
+
+pprFormatOpRegOp :: LitString -> Format -> Operand -> Reg -> Operand -> SDoc
+pprFormatOpRegOp name format off reg1 op2
+  = hcat [
+        pprMnemonic name format,
+        pprOperand format off,
+        comma,
+        pprReg format reg1,
+        comma,
+        pprOperand format op2
+    ]
 
 pprRegReg :: LitString -> Reg -> Reg -> SDoc
 pprRegReg name reg1 reg2
@@ -1227,6 +1271,17 @@ pprFormatOpReg name format op1 reg2
         pprOperand format op1,
         comma,
         pprReg (archWordFormat (target32Bit platform)) reg2
+    ]
+
+pprFormatOpRegReg :: LitString -> Format -> Operand -> Reg -> Reg -> SDoc
+pprFormatOpRegReg name format op1 reg2 reg3
+  = hcat [
+        pprMnemonic name format,
+        pprOperand format op1,
+        comma,
+        pprReg format reg2,
+        comma,
+        pprReg format reg3
     ]
 
 pprCondOpReg :: LitString -> Format -> Cond -> Operand -> Reg -> SDoc

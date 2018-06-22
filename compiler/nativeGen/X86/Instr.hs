@@ -358,6 +358,26 @@ data Instr
         | CMPXCHG     Format Operand Operand -- src (r), dst (r/m), eax implicit
         | MFENCE
 
+        -- Vector Instructions --
+        -- NOTE: Instructions follow the AT&T syntax
+        -- Constructors and deconstructors
+        | VBROADCASTSS Format AddrMode Reg
+        | VEXTRACTPS   Format Operand Reg Operand
+        | INSERTPS     Format Operand AddrMode Reg
+
+        | VMOVUPS      Format Operand Operand
+
+        | VPXOR        Format Reg Reg Reg
+
+        -- Arithmetic
+        | VADDPS       Format Operand Reg Reg
+        | VSUBPS       Format Operand Reg Reg
+        | VMULPS       Format Operand Reg Reg
+        | VDIVPS       Format Operand Reg Reg
+
+        -- Shuffle
+        | VPSHUFD      Format Operand Operand Reg
+
 data PrefetchVariant = NTA | Lvl0 | Lvl1 | Lvl2
 
 
@@ -477,6 +497,23 @@ x86_regUsageOfInstr platform instr
     XADD _ src dst      -> usageMM src dst
     CMPXCHG _ src dst   -> usageRMM src dst (OpReg eax)
     MFENCE -> noUsage
+
+    -- vector instructions
+    VBROADCASTSS _ src dst   -> mkRU (use_EA src []) [dst]
+    VEXTRACTPS   _ off src dst -> mkRU ((use_R off []) ++ [src]) (use_R dst [])
+    INSERTPS     _ off addr dst
+      -> mkRU ((use_R off []) ++ (use_EA addr [])) [dst]
+
+    VMOVUPS      _ src dst   -> mkRU (use_R src []) (use_R dst [])
+    VPXOR        _ s1 s2 dst -> mkRU [s1,s2] [dst]
+
+    VADDPS       _ s1 s2 dst -> mkRU ((use_R s1 []) ++ [s2]) [dst]
+    VSUBPS       _ s1 s2 dst -> mkRU ((use_R s1 []) ++ [s2]) [dst]
+    VMULPS       _ s1 s2 dst -> mkRU ((use_R s1 []) ++ [s2]) [dst]
+    VDIVPS       _ s1 s2 dst -> mkRU ((use_R s1 []) ++ [s2]) [dst]
+
+    VPSHUFD      _ off src dst
+      -> mkRU (concatMap (\op -> use_R op []) [off, src]) [dst]
 
     _other              -> panic "regUsage: unrecognised instr"
  where
@@ -659,6 +696,23 @@ x86_patchRegsOfInstr instr env
     CMPXCHG fmt src dst  -> patch2 (CMPXCHG fmt) src dst
     MFENCE               -> instr
 
+    -- vector instructions
+    VBROADCASTSS fmt src dst   -> VBROADCASTSS fmt (lookupAddr src) (env dst)
+    VEXTRACTPS   fmt off src dst
+      -> VEXTRACTPS fmt (patchOp off) (env src) (patchOp dst)
+    INSERTPS    fmt off addr dst
+      -> INSERTPS fmt (patchOp off) (lookupAddr addr) (env dst)
+
+    VMOVUPS      fmt src dst   -> VMOVUPS fmt (patchOp src) (patchOp dst)
+    VPXOR        fmt s1 s2 dst -> VPXOR fmt (env s1) (env s2) (env dst)
+
+    VADDPS       fmt s1 s2 dst -> VADDPS fmt (patchOp s1) (env s2) (env dst)
+    VSUBPS       fmt s1 s2 dst -> VSUBPS fmt (patchOp s1) (env s2) (env dst)
+    VMULPS       fmt s1 s2 dst -> VMULPS fmt (patchOp s1) (env s2) (env dst)
+    VDIVPS       fmt s1 s2 dst -> VDIVPS fmt (patchOp s1) (env s2) (env dst)
+
+    VPSHUFD      fmt off src dst
+      -> VPSHUFD fmt (patchOp off) (patchOp src) (env dst)
     _other              -> panic "patchRegs: unrecognised instr"
 
   where
